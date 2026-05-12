@@ -25,8 +25,9 @@ div[role="radiogroup"] > label:hover {
     border-color: #FF7F50;
     background-color: #fff8f5;
 }
+/* 按钮美化 */
 div.stButton > button:first-child {
-    border-radius: 10px;
+    border-radius: 8px;
     font-weight: bold;
 }
 /* 隐藏无用的锚点链接 */
@@ -36,19 +37,55 @@ a.st-emotion-cache-1f35sxg {display: none;}
 st.markdown(custom_css, unsafe_allow_html=True)
 # ============================================
 
-# 2. 题库配置库（已更新为你定制的四套题名称）
-QUIZ_SETS = {
-    "第一套：理论学习与政治素养": "1.csv",
-    "第二套：青年志愿服务与精神内涵": "2.csv",
-    "第三套：吉林省省情": "3.csv",
-    "第四套：卫国戍边与西部计划政策": "4.csv"
+# 2. 细化后的题库配置大纲 (适配下划线文件名如 1_1.csv)
+SYLLABUS = {
+    "一、理论学习与政治素养": {
+        "📝 【本章综合全测】": "1_all.csv",
+        "📖 习近平新时代中国特色社会主义思想": "1_1.csv",
+        "🚩 党的二十大及二十届历次全会精神": "1_2.csv",
+        "📜 四史、中华民族发展史": "1_3.csv",
+        "🌟 总书记关于青年工作重要思想": "1_4.csv",
+        "🔥 红色精神、吉林省情": "1_5.csv"
+    },
+    "二、青年志愿服务": {
+        "📝 【本章综合全测】": "2_all.csv",
+        "❤️ 青年志愿服务-精神内涵": "2_1.csv",
+        "✉️ 青年志愿服务-总书记重要贺信精神": "2_2.csv",
+        "💌 青年志愿服务-总书记重要回信精神": "2_3.csv",
+        "⚖️ 青年志愿服务-志愿服务基本原则": "2_4.csv",
+        "⏳ 志愿服务-发展历程": "2_5.csv"
+    },
+    "三、卫国戍边与西部计划": {
+        "📝 【本章综合全测】": "3_all.csv",
+        "🏢 西部计划组织管理": "3_1.csv",
+        "⏳ 西部计划发展历程": "3_2.csv",
+        "🗺️ 西部计划服务领域": "3_3.csv",
+        "📋 志愿者管理办法": "3_4.csv",
+        "🛡️ 卫国戍边政策": "3_5.csv",
+        "🤝 民族工作重要思想": "3_6.csv",
+        "🪖 国防教育": "3_7.csv",
+        "🔒 保密教育": "3_8.csv",
+        "⚠️ 安全自护教育": "3_9.csv"
+    },
+    "四、吉林省省情": {
+        "📝 【本章综合全测】": "4_all.csv",
+        "📍 边境地区基本情况": "4_1.csv",
+        "🎤 总书记视察吉林重要讲话精神": "4_2.csv",
+        "📝 吉林省委十二届八次全会精神": "4_3.csv",
+        "📈 省“十五五”规划纲要": "4_4.csv",
+        "🏞️ 省情概况": "4_5.csv",
+        "🌲 长白山保护开发区": "4_6.csv"
+    }
 }
 
 
 @st.cache_data
 def load_data(file_path):
-    if os.path.exists(file_path):
-        return pd.read_csv(file_path)
+    # 自动获取当前 app.py 所在的文件夹路径
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    full_path = os.path.join(current_dir, file_path)
+    if os.path.exists(full_path):
+        return pd.read_csv(full_path)
     else:
         return pd.DataFrame()
 
@@ -75,7 +112,6 @@ def init_new_quiz(num_questions):
     st.session_state.wrong_q_indices = set()
     st.session_state.mode = '全题库 (随机乱序)'
 
-    # 重置学习数据
     st.session_state.start_time = time.time()
     st.session_state.answered_count = 0
     st.session_state.correct_count = 0
@@ -85,37 +121,46 @@ def init_new_quiz(num_questions):
     st.session_state.shuffled_indices = indices
 
 
+def next_question(total_len):
+    st.session_state.show_exp = False
+    if st.session_state.current_idx < total_len - 1:
+        st.session_state.current_idx += 1
+    else:
+        st.session_state.current_idx = 0
+        st.toast("✅ 已经刷到底啦！")
+    st.rerun()
+
+
 # ================== 第一层网页：选套题 ==================
 if st.session_state.page == 'home':
     st.title("📚 西部计划·冲刺特训")
-    st.write("欢迎来到 **Joanne的专属备考平台**，请选择今天要刷的套题：")
+    st.write("欢迎来到 **Joanne的专属备考平台**，请选择今天要突破的专项：")
     st.write("---")
 
-    for set_name, file_path in QUIZ_SETS.items():
-        if st.button(f"📝 {set_name}", use_container_width=True):
-            df_temp = load_data(file_path)
-            if df_temp.empty:
-                st.error(f"⚠️ 找不到题库文件 **{file_path}**。请确保文件已上传！")
-            else:
-                st.session_state.current_set_name = set_name
-                st.session_state.current_set_path = file_path
-                init_new_quiz(len(df_temp))
-                st.session_state.page = 'quiz'
-                st.rerun()
+    for main_cat, sub_cats in SYLLABUS.items():
+        with st.expander(f"📂 {main_cat}", expanded=False):
+            for sub_name, file_path in sub_cats.items():
+                if st.button(sub_name, key=file_path, use_container_width=True):
+                    df_temp = load_data(file_path)
+                    if df_temp.empty:
+                        st.warning(f"🚧 专属题库 **{file_path}** 正在快马加鞭录入中！")
+                    else:
+                        st.session_state.current_set_name = f"{main_cat} - {sub_name}"
+                        st.session_state.current_set_path = file_path
+                        init_new_quiz(len(df_temp))
+                        st.session_state.page = 'quiz'
+                        st.rerun()
 
 # ================== 第二层网页：做题 ==================
 elif st.session_state.page == 'quiz':
     df = load_data(st.session_state.current_set_path)
 
-    # 侧边栏：学习看板与导出功能
     with st.sidebar:
-        if st.button("⬅️ 返回重选套题", use_container_width=True):
+        if st.button("⬅️ 返回重选专项", use_container_width=True):
             st.session_state.page = 'home'
             st.rerun()
 
         st.header("📊 学习数据看板")
-
-        # 计算准确率和平均速度
         if st.session_state.answered_count > 0:
             acc = int((st.session_state.correct_count / st.session_state.answered_count) * 100)
             elapsed_time = time.time() - st.session_state.start_time
@@ -136,81 +181,64 @@ elif st.session_state.page == 'quiz':
             st.rerun()
 
         st.write("---")
-        st.write(f"❌ 当前套题错题数：**{len(st.session_state.wrong_q_indices)}**")
+        st.write(f"❌ 当前模块错题数：**{len(st.session_state.wrong_q_indices)}**")
 
-        # 错题导出功能
         if len(st.session_state.wrong_q_indices) > 0:
             wrong_df = df.iloc[list(st.session_state.wrong_q_indices)]
             csv_data = wrong_df.to_csv(index=False).encode('utf-8-sig')
             st.download_button(
-                label="📥 导出错题本(打印专用)",
+                label="📥 导出错题本",
                 data=csv_data,
-                file_name=f"慧子的错题本_{st.session_state.current_set_name[-4:]}.csv",
+                file_name=f"慧子错题本.csv",
                 mime="text/csv",
                 use_container_width=True
             )
 
-            if st.button("🗑️ 清空本套错题", use_container_width=True):
-                st.session_state.wrong_q_indices.clear()
-                st.rerun()
+    st.subheader(st.session_state.current_set_name)
 
-    st.title(st.session_state.current_set_name)
-
-    # 动态悬浮倒计时（设为 30 分钟 = 1800 秒）
-    TOTAL_SECONDS = 1800
+    # 倒计时模块 (10分钟)
+    TOTAL_SECONDS = 600
     elapsed_seconds = int(time.time() - st.session_state.start_time)
 
-    # 注入 Javascript 实现无刷新秒表跳动，超时变红正向计时
     timer_html = f"""
-    <div id="timer-container" style="text-align: center; font-size: 18px; font-weight: bold; color: #FF4B4B; background-color: #FFEBEB; padding: 10px; border-radius: 8px; margin-bottom: 15px; border: 1px dashed #FF4B4B; transition: all 0.3s;">
-        ⏳ <span id="timer-title">模拟考场倒计时：</span><span id="countdown"></span>
+    <div id="timer-container" style="text-align:center; font-size:18px; font-weight:bold; color:#FF4B4B; background-color:#FFEBEB; padding:10px; border-radius:8px; margin-bottom:15px; border:1px dashed #FF4B4B;">
+        ⏳ <span id="timer-title">专项突破倒计时：</span><span id="countdown"></span>
     </div>
     <script>
     var totalSeconds = {TOTAL_SECONDS};
     var elapsed = {elapsed_seconds};
-
     var timerId = setInterval(function() {{
         elapsed++;
         var diff = totalSeconds - elapsed;
-
         if (diff >= 0) {{
             var m = Math.floor(diff / 60);
             var s = Math.floor(diff % 60);
             document.getElementById("countdown").innerHTML = m + " 分 " + s + " 秒";
         }} else {{
-            // 超时正向计时逻辑
             var over = Math.abs(diff);
             var m = Math.floor(over / 60);
             var s = Math.floor(over % 60);
-
-            // 改变外观为红色加粗警告
             document.getElementById("timer-container").style.backgroundColor = "#ffcccc";
             document.getElementById("timer-container").style.border = "2px solid red";
-            document.getElementById("timer-title").innerHTML = "";
-            document.getElementById("countdown").innerHTML = "<span style='color: red; font-size: 20px; font-weight: 900;'>⚠️ 考试时间已到！已超时：" + m + " 分 " + s + " 秒</span>";
+            document.getElementById("countdown").innerHTML = "<span style='color:red; font-size:20px; font-weight:900;'>⚠️ 已超时：" + m + " 分 " + s + " 秒</span>";
         }}
     }}, 1000);
     </script>
     """
     components.html(timer_html, height=75)
 
-    # 确定当前展示哪组题
     if st.session_state.mode == '全题库 (随机乱序)':
         questions_list = st.session_state.shuffled_indices
     else:
         questions_list = list(st.session_state.wrong_q_indices)
 
     if not questions_list:
-        if st.session_state.mode == '错题本':
-            st.success("太棒啦！这套题目前没有错题，继续保持！🎉")
-            st.balloons()  # 触发满分气球彩蛋！
-        else:
-            st.warning("当前题库暂无题目。")
+        st.success("目前没有题目哦！继续保持！🎉")
     else:
-        # 进度条
-        progress = (st.session_state.current_idx + 1) / len(questions_list)
+        total_q = len(questions_list)
+        progress = (st.session_state.current_idx + 1) / total_q
         st.progress(progress)
-        st.caption(f"当前进度: {st.session_state.current_idx + 1} / {len(questions_list)}")
+        st.caption(f"当前进度: {st.session_state.current_idx + 1} / {total_q}")
 
         real_idx = questions_list[st.session_state.current_idx]
         q_data = df.iloc[real_idx]
@@ -222,36 +250,23 @@ elif st.session_state.page == 'quiz':
 
         choice = st.radio("请点击选项卡片作答：", options, index=None, key=f"q_{real_idx}_{st.session_state.mode}")
 
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("提交并查看解析", use_container_width=True):
-                if choice:
-                    st.session_state.show_exp = True
-                    # 记录答题数量
-                    st.session_state.answered_count += 1
-
-                    if choice.startswith(correct_letter):
-                        st.session_state.correct_count += 1
-                    else:
-                        st.session_state.wrong_q_indices.add(real_idx)
-                else:
-                    st.warning("请先选择一个答案哦！")
-
-        with col2:
-            if st.button("下一题 ➡️", use_container_width=True):
-                st.session_state.show_exp = False
-                if st.session_state.current_idx < len(questions_list) - 1:
-                    st.session_state.current_idx += 1
-                else:
-                    st.session_state.current_idx = 0
-                    st.toast("✅ 已经刷到底啦！")
-                st.rerun()
-
-        # 解析区
-        if st.session_state.show_exp:
-            st.write("---")
+        if choice:
             if choice.startswith(correct_letter):
-                st.success("🎉 回答正确！")
+                st.success(f"✅ 回答正确！")
+                if not st.session_state.show_exp:
+                    st.session_state.answered_count += 1
+                    st.session_state.correct_count += 1
+                    st.session_state.show_exp = True
+
+                time.sleep(1.2)
+                next_question(total_q)
             else:
                 st.error(f"❌ 回答错误。正确答案是：**{correct_letter}**")
-            st.info(f"💡 解析：{q_data['解析']}")
+                if not st.session_state.show_exp:
+                    st.session_state.answered_count += 1
+                    st.session_state.wrong_q_indices.add(real_idx)
+                    st.session_state.show_exp = True
+
+                st.info(f"💡 解析：{q_data['解析']}")
+                if st.button("已了解，下一题 ➡️", use_container_width=True, type="primary"):
+                    next_question(total_q)
