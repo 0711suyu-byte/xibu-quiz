@@ -37,7 +37,7 @@ a.st-emotion-cache-1f35sxg {display: none;}
 st.markdown(custom_css, unsafe_allow_html=True)
 # ============================================
 
-# 2. 细化后的题库配置大纲 (适配下划线文件名如 1_1.csv)
+# 2. 细化后的题库配置大纲
 SYLLABUS = {
     "一、理论学习与政治素养": {
         "📝 【本章综合全测】": "1_all.csv",
@@ -81,7 +81,6 @@ SYLLABUS = {
 
 @st.cache_data
 def load_data(file_path):
-    # 自动获取当前 app.py 所在的文件夹路径
     current_dir = os.path.dirname(os.path.abspath(__file__))
     full_path = os.path.join(current_dir, file_path)
     if os.path.exists(full_path):
@@ -100,7 +99,6 @@ if 'show_exp' not in st.session_state: st.session_state.show_exp = False
 if 'mode' not in st.session_state: st.session_state.mode = '全题库 (随机乱序)'
 if 'shuffled_indices' not in st.session_state: st.session_state.shuffled_indices = []
 
-# 记录速度和准确率的状态
 if 'start_time' not in st.session_state: st.session_state.start_time = 0
 if 'answered_count' not in st.session_state: st.session_state.answered_count = 0
 if 'correct_count' not in st.session_state: st.session_state.correct_count = 0
@@ -245,13 +243,27 @@ elif st.session_state.page == 'quiz':
 
         st.markdown(f"#### {q_data['题目']}")
 
-        options = [q_data['选项A'], q_data['选项B'], q_data['选项C']]
-        correct_letter = str(q_data['正确答案']).strip()
+        # 【关键修复区】：提取选项内容并清理多余空格
+        options = [str(q_data['选项A']).strip(), str(q_data['选项B']).strip(), str(q_data['选项C']).strip()]
+
+        # 提取 CSV 中的正确答案标记（如 A, B, C）
+        correct_letter = str(q_data['正确答案']).strip().upper()
+
+        # 动态绑定：不管选项有没有 A. 前缀，直接根据字母获取完整的文本用于最终比对！
+        if 'A' in correct_letter:
+            correct_text = options[0]
+        elif 'B' in correct_letter:
+            correct_text = options[1]
+        elif 'C' in correct_letter:
+            correct_text = options[2]
+        else:
+            correct_text = options[0]  # 兜底机制
 
         choice = st.radio("请点击选项卡片作答：", options, index=None, key=f"q_{real_idx}_{st.session_state.mode}")
 
         if choice:
-            if choice.startswith(correct_letter):
+            # 【核心逻辑重构】：放弃首字母匹配，直接比对两段文本是否完全一致！
+            if choice == correct_text:
                 st.success(f"✅ 回答正确！")
                 if not st.session_state.show_exp:
                     st.session_state.answered_count += 1
@@ -261,7 +273,7 @@ elif st.session_state.page == 'quiz':
                 time.sleep(1.2)
                 next_question(total_q)
             else:
-                st.error(f"❌ 回答错误。正确答案是：**{correct_letter}**")
+                st.error(f"❌ 回答错误。正确答案是：**{correct_text}**")
                 if not st.session_state.show_exp:
                     st.session_state.answered_count += 1
                     st.session_state.wrong_q_indices.add(real_idx)
