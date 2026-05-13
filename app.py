@@ -37,10 +37,9 @@ a.st-emotion-cache-1f35sxg {display: none;}
 st.markdown(custom_css, unsafe_allow_html=True)
 # ============================================
 
-# 2. 细化后的题库配置大纲
+# 2. 题库配置大纲 (完全匹配你要求的下划线数字文件名)
 SYLLABUS = {
     "一、理论学习与政治素养": {
-        "📝 【本章综合全测】": "1_all.csv",
         "📖 习近平新时代中国特色社会主义思想": "1_1.csv",
         "🚩 党的二十大及二十届历次全会精神": "1_2.csv",
         "📜 四史、中华民族发展史": "1_3.csv",
@@ -48,7 +47,6 @@ SYLLABUS = {
         "🔥 红色精神、吉林省情": "1_5.csv"
     },
     "二、青年志愿服务": {
-        "📝 【本章综合全测】": "2_all.csv",
         "❤️ 青年志愿服务-精神内涵": "2_1.csv",
         "✉️ 青年志愿服务-总书记重要贺信精神": "2_2.csv",
         "💌 青年志愿服务-总书记重要回信精神": "2_3.csv",
@@ -56,7 +54,6 @@ SYLLABUS = {
         "⏳ 志愿服务-发展历程": "2_5.csv"
     },
     "三、卫国戍边与西部计划": {
-        "📝 【本章综合全测】": "3_all.csv",
         "🏢 西部计划组织管理": "3_1.csv",
         "⏳ 西部计划发展历程": "3_2.csv",
         "🗺️ 西部计划服务领域": "3_3.csv",
@@ -68,13 +65,18 @@ SYLLABUS = {
         "⚠️ 安全自护教育": "3_9.csv"
     },
     "四、吉林省省情": {
-        "📝 【本章综合全测】": "4_all.csv",
         "📍 边境地区基本情况": "4_1.csv",
         "🎤 总书记视察吉林重要讲话精神": "4_2.csv",
         "📝 吉林省委十二届八次全会精神": "4_3.csv",
         "📈 省“十五五”规划纲要": "4_4.csv",
         "🏞️ 省情概况": "4_5.csv",
         "🌲 长白山保护开发区": "4_6.csv"
+    },
+    "五、核心简答题必背专区": {
+        "🧠 简答1：理论学习与政治素养": "简答1_理论学习与政治素养.csv",
+        "🤝 简答2：青年志愿服务": "简答2_青年志愿服务.csv",
+        "🛡️ 简答3：卫国戍边与西部计划": "简答3_卫国戍边与西部计划.csv",
+        "🏞️ 简答4：吉林省省情": "简答4_吉林省省情.csv"
     }
 }
 
@@ -109,11 +111,9 @@ def init_new_quiz(num_questions):
     st.session_state.show_exp = False
     st.session_state.wrong_q_indices = set()
     st.session_state.mode = '全题库 (随机乱序)'
-
     st.session_state.start_time = time.time()
     st.session_state.answered_count = 0
     st.session_state.correct_count = 0
-
     indices = list(range(num_questions))
     random.shuffle(indices)
     st.session_state.shuffled_indices = indices
@@ -141,7 +141,7 @@ if st.session_state.page == 'home':
                 if st.button(sub_name, key=file_path, use_container_width=True):
                     df_temp = load_data(file_path)
                     if df_temp.empty:
-                        st.warning(f"🚧 专属题库 **{file_path}** 正在快马加鞭录入中！")
+                        st.warning(f"🚧 专属题库 **{file_path}** 正在录入中...")
                     else:
                         st.session_state.current_set_name = f"{main_cat} - {sub_name}"
                         st.session_state.current_set_path = file_path
@@ -184,38 +184,27 @@ elif st.session_state.page == 'quiz':
         if len(st.session_state.wrong_q_indices) > 0:
             wrong_df = df.iloc[list(st.session_state.wrong_q_indices)]
             csv_data = wrong_df.to_csv(index=False).encode('utf-8-sig')
-            st.download_button(
-                label="📥 导出错题本",
-                data=csv_data,
-                file_name=f"慧子错题本.csv",
-                mime="text/csv",
-                use_container_width=True
-            )
+            st.download_button(label="📥 导出错题本", data=csv_data, file_name=f"慧子错题本.csv", mime="text/csv",
+                               use_container_width=True)
 
     st.subheader(st.session_state.current_set_name)
 
-    # 倒计时模块 (10分钟)
+    # 10分钟倒计时 JS 注入
     TOTAL_SECONDS = 600
     elapsed_seconds = int(time.time() - st.session_state.start_time)
-
     timer_html = f"""
     <div id="timer-container" style="text-align:center; font-size:18px; font-weight:bold; color:#FF4B4B; background-color:#FFEBEB; padding:10px; border-radius:8px; margin-bottom:15px; border:1px dashed #FF4B4B;">
         ⏳ <span id="timer-title">专项突破倒计时：</span><span id="countdown"></span>
     </div>
     <script>
-    var totalSeconds = {TOTAL_SECONDS};
-    var elapsed = {elapsed_seconds};
+    var totalSeconds = {TOTAL_SECONDS}; var elapsed = {elapsed_seconds};
     var timerId = setInterval(function() {{
-        elapsed++;
-        var diff = totalSeconds - elapsed;
+        elapsed++; var diff = totalSeconds - elapsed;
         if (diff >= 0) {{
-            var m = Math.floor(diff / 60);
-            var s = Math.floor(diff % 60);
+            var m = Math.floor(diff / 60); var s = Math.floor(diff % 60);
             document.getElementById("countdown").innerHTML = m + " 分 " + s + " 秒";
         }} else {{
-            var over = Math.abs(diff);
-            var m = Math.floor(over / 60);
-            var s = Math.floor(over % 60);
+            var over = Math.abs(diff); var m = Math.floor(over / 60); var s = Math.floor(over % 60);
             document.getElementById("timer-container").style.backgroundColor = "#ffcccc";
             document.getElementById("timer-container").style.border = "2px solid red";
             document.getElementById("countdown").innerHTML = "<span style='color:red; font-size:20px; font-weight:900;'>⚠️ 已超时：" + m + " 分 " + s + " 秒</span>";
@@ -234,51 +223,51 @@ elif st.session_state.page == 'quiz':
         st.success("目前没有题目哦！继续保持！🎉")
     else:
         total_q = len(questions_list)
-        progress = (st.session_state.current_idx + 1) / total_q
-        st.progress(progress)
+        st.progress((st.session_state.current_idx + 1) / total_q)
         st.caption(f"当前进度: {st.session_state.current_idx + 1} / {total_q}")
 
         real_idx = questions_list[st.session_state.current_idx]
         q_data = df.iloc[real_idx]
-
         st.markdown(f"#### {q_data['题目']}")
 
-        # 【关键修复区】：提取选项内容并清理多余空格
         options = [str(q_data['选项A']).strip(), str(q_data['选项B']).strip(), str(q_data['选项C']).strip()]
+        correct_raw = str(q_data['正确答案']).strip().upper()
 
-        # 提取 CSV 中的正确答案标记（如 A, B, C）
-        correct_letter = str(q_data['正确答案']).strip().upper()
-
-        # 动态绑定：不管选项有没有 A. 前缀，直接根据字母获取完整的文本用于最终比对！
-        if 'A' in correct_letter:
+        # 智能识别正确文本（解决简答题比对问题）
+        if correct_raw in options:
+            correct_text = correct_raw
+        elif 'A' in correct_raw:
             correct_text = options[0]
-        elif 'B' in correct_letter:
+        elif 'B' in correct_raw:
             correct_text = options[1]
-        elif 'C' in correct_letter:
+        elif 'C' in correct_raw:
             correct_text = options[2]
         else:
-            correct_text = options[0]  # 兜底机制
+            correct_text = options[0]
 
         choice = st.radio("请点击选项卡片作答：", options, index=None, key=f"q_{real_idx}_{st.session_state.mode}")
 
         if choice:
-            # 【核心逻辑重构】：放弃首字母匹配，直接比对两段文本是否完全一致！
             if choice == correct_text:
                 st.success(f"✅ 回答正确！")
                 if not st.session_state.show_exp:
                     st.session_state.answered_count += 1
                     st.session_state.correct_count += 1
                     st.session_state.show_exp = True
-
                 time.sleep(1.2)
                 next_question(total_q)
             else:
-                st.error(f"❌ 回答错误。正确答案是：**{correct_text}**")
+                # 判定为错（含简答题选了模糊/不会）
+                if "掌握" in correct_text and ("模糊" in choice or "不会" in choice):
+                    st.error(f"⚠️ 已记入错题本，请仔细背诵参考答案。")
+                else:
+                    st.error(f"❌ 回答错误。正确答案是：**{correct_text}**")
+
                 if not st.session_state.show_exp:
                     st.session_state.answered_count += 1
                     st.session_state.wrong_q_indices.add(real_idx)
                     st.session_state.show_exp = True
 
-                st.info(f"💡 解析：{q_data['解析']}")
-                if st.button("已了解，下一题 ➡️", use_container_width=True, type="primary"):
+                st.info(f"💡 解析/答案：\n\n{q_data['解析']}")
+                if st.button("我已记住，下一题 ➡️", use_container_width=True, type="primary"):
                     next_question(total_q)
