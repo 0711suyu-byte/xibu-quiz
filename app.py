@@ -43,7 +43,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# 2. 题库大纲 (带 Emoji 修饰)
+# 2. 题库大纲
 SYLLABUS = {
     "🏛️ 第一部分：理论学习与政治素养": {
         "📊 【本章全真模拟】": "1_all.csv",
@@ -101,20 +101,6 @@ def load_data(file_path):
     if os.path.exists(full_path):
         return pd.read_csv(full_path)
     return pd.DataFrame()
-
-
-def clean_duplicates(file_path):
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    full_path = os.path.join(current_dir, file_path)
-    if os.path.exists(full_path):
-        df = pd.read_csv(full_path)
-        if '题目' in df.columns:
-            df['check'] = df['题目'].astype(str).str.replace(r'[^\w\u4e00-\u9fa5]', '', regex=True)
-            df_cleaned = df.drop_duplicates(subset=['check'], keep='first').drop(columns=['check'])
-            if len(df) > len(df_cleaned):
-                df_cleaned.to_csv(full_path, index=False, encoding='utf-8-sig')
-                return len(df) - len(df_cleaned)
-    return 0
 
 
 # 4. 会话状态
@@ -188,7 +174,6 @@ elif st.session_state.page == 'quiz':
         if len(st.session_state.wrong_q_indices) > 0:
             wrong_df = df.iloc[list(st.session_state.wrong_q_indices)]
             csv_data = wrong_df.to_csv(index=False).encode('utf-8-sig')
-            # 优化：动态文件名
             st.download_button(
                 "📥 导出本章错题",
                 data=csv_data,
@@ -196,10 +181,6 @@ elif st.session_state.page == 'quiz':
                 mime="text/csv",
                 use_container_width=True
             )
-
-        if st.button("🧹 一键查杀重复题"):
-            num = clean_duplicates(st.session_state.current_set_path)
-            st.toast(f"成功清理 {num} 道重复题。")
 
     st.subheader(f"📍 {st.session_state.current_set_name}")
 
@@ -219,9 +200,28 @@ elif st.session_state.page == 'quiz':
     q_data = df.iloc[questions_list[curr_idx]]
     st.markdown(f"#### {q_data['题目']}")
 
-    options = [str(q_data['选项A']).strip(), str(q_data['选项B']).strip(), str(q_data['选项C']).strip()]
+    # 提取选项
+    opt_a = str(q_data['选项A']).strip()
+    opt_b = str(q_data['选项B']).strip()
+    opt_c = str(q_data['选项C']).strip()
+    options = [opt_a, opt_b, opt_c]
+
+    # 【修复核心：判题逻辑优化】
     ans_raw = str(q_data['正确答案']).strip().upper()
-    correct_text = options[0] if 'A' in ans_raw else (options[1] if 'B' in ans_raw else options[2])
+
+    # 针对简答题（闪卡模式）的特殊处理
+    if "简答" in st.session_state.current_set_name or "熟练掌握" in opt_a:
+        correct_text = opt_a  # 默认第一个选项“熟练掌握”为正确
+    else:
+        # 针对普通选择题处理 A/B/C
+        if 'A' == ans_raw:
+            correct_text = opt_a
+        elif 'B' == ans_raw:
+            correct_text = opt_b
+        elif 'C' == ans_raw:
+            correct_text = opt_c
+        else:
+            correct_text = str(q_data['正确答案']).strip()  # 容错处理
 
     choice = st.radio("💡 请点击选项作答：", options, index=None, key=f"q_{curr_idx}")
 
@@ -256,9 +256,9 @@ elif st.session_state.page == 'quiz':
                 if st.session_state.losing_streak == 3:
                     st.toast("没关系，这几题有点难，慢慢来 🍃")
                 elif st.session_state.losing_streak >= 5:
-                    st.toast("要不要喝口水休息下？记得看解析哦 ☕")
+                    st.toast("要不要喝口水休息下？知识点已经记入错题本了 ☕")
 
-            st.error(f"判定错误。正确选项：{correct_text}")
-            st.info(f"📖 【解析】\n\n{q_data['解析']}")
+            st.error(f"判定错误。正确选项应为：{correct_text}")
+            st.info(f"📖 【参考解析/背诵要点】\n\n{q_data['解析']}")
             if st.button("下一题 ➡️"):
                 next_question(total_q)
